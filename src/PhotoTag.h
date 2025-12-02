@@ -22,12 +22,29 @@ public:
     void Update();
     void RenderUI();
 
+    void LoadSourceFolder();
+
 private:
     ID3D11Device* m_pd3dDevice = nullptr;
     ID3D11DeviceContext* m_pd3dDeviceContext = nullptr;
 
     AppConfig m_Config;
 
+    // File navigation
+    std::vector<std::string> m_ImageFiles;
+    int m_CurrentImageIdx = -1;
+
+    // Textures
+    ID3D11ShaderResourceView* m_MainImageTexture = nullptr;
+
+    int m_MainImageWidth = 0;
+    int m_MainImageHeight = 0;
+
     // GDI+
     ULONG_PTR m_gdiplusToken;
+
+    // Helpers
+    void LoadImageTexture(const char* filename, ID3D11ShaderResourceView** out_srv, int* out_width, int* out_height);
+    void UnloadCurrentImages();
+    void OpenFolderDialog(char* buffer, int maxLen);
 };
