@@ -30,7 +30,63 @@ PhotoApp::PhotoApp(ID3D11Device* device, ID3D11DeviceContext* context)
 }
 
 PhotoApp::~PhotoApp() {
+    UnloadCurrentImages();
     Gdiplus::GdiplusShutdown(m_gdiplusToken);
+}
+
+void PhotoApp::UnloadCurrentImages() {
+    if (m_MainImageTexture) { m_MainImageTexture->Release(); m_MainImageTexture = nullptr; }
+}
+
+// Simple GDI+ to DX11 loader
+void PhotoApp::LoadImageTexture(const char* filename, ID3D11ShaderResourceView** out_srv, int* out_width, int* out_height) {
+    if (!filename || !*filename) return;
+
+    std::wstring wFilename = Utf8ToWide(filename);
+    Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromFile(wFilename.c_str());
+
+    if (bitmap->GetLastStatus() != Gdiplus::Ok) {
+        delete bitmap;
+        return;
+    }
+
+    *out_width = bitmap->GetWidth();
+    *out_height = bitmap->GetHeight();
+
+    Gdiplus::BitmapData data;
+    Gdiplus::Rect rect(0, 0, bitmap->GetWidth(), bitmap->GetHeight());
+    bitmap->LockBits(&rect, Gdiplus::ImageLockModeRead, PixelFormat32bppARGB, &data);
+
+    D3D11_TEXTURE2D_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.Width = bitmap->GetWidth();
+    desc.Height = bitmap->GetHeight();
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // GDI+ uses BGRA
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA subResource;
+    subResource.pSysMem = data.Scan0;
+    subResource.SysMemPitch = data.Stride;
+    subResource.SysMemSlicePitch = 0;
+
+    ID3D11Texture2D* pTexture = NULL;
+    if (SUCCEEDED(m_pd3dDevice->CreateTexture2D(&desc, &subResource, &pTexture))) {
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        ZeroMemory(&srvDesc, sizeof(srvDesc));
+        srvDesc.Format = desc.Format;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = desc.MipLevels;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        m_pd3dDevice->CreateShaderResourceView(pTexture, &srvDesc, out_srv);
+        pTexture->Release();
+    }
+    bitmap->UnlockBits(&data);
+    delete bitmap;
 }
 
 void PhotoApp::Update() {
