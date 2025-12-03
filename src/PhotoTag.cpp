@@ -89,6 +89,32 @@ void PhotoApp::LoadImageTexture(const char* filename, ID3D11ShaderResourceView**
     delete bitmap;
 }
 
+void PhotoApp::LoadSourceFolder() {
+    m_ImageFiles.clear();
+    std::string search_path = std::string(m_Config.SourceFolder) + "\\*.*";
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = ::FindFirstFileA(search_path.c_str(), &fd);
+    if(hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if(!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                std::string name = fd.cFileName;
+                std::string ext = name.substr(name.find_last_of(".") + 1);
+                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                if (ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "bmp") {
+                    m_ImageFiles.push_back(std::string(m_Config.SourceFolder) + "\\" + name);
+                }
+            }
+        } while(::FindNextFileA(hFind, &fd));
+        ::FindClose(hFind);
+    }
+
+    if (!m_ImageFiles.empty()) {
+        m_CurrentImageIdx = 0;
+        UnloadCurrentImages();
+        LoadImageTexture(m_ImageFiles[0].c_str(), &m_MainImageTexture, &m_MainImageWidth, &m_MainImageHeight);
+    }
+}
+
 void PhotoApp::Update() {
    // Logic updates map go here
 }
@@ -109,6 +135,28 @@ void PhotoApp::RenderUI() {
 
     if (ImGui::Button("Output Folder")) OpenFolderDialog(m_Config.DestFolder, 260);
     ImGui::Text("%s", m_Config.DestFolder);
+
+    ImGui::Separator();
+    ImGui::Text("IMAGES");
+
+    if (ImGui::Button("Load Images")) {
+        LoadSourceFolder();
+    }
+    ImGui::Text("%d images loaded", (int)m_ImageFiles.size());
+
+    if (m_MainImageTexture) {
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        float aspect = (float)m_MainImageWidth / (float)m_MainImageHeight;
+        ImVec2 drawSize = avail;
+        if (avail.x / avail.y > aspect) {
+            drawSize.x = avail.y * aspect;
+        } else {
+            drawSize.y = avail.x / aspect;
+        }
+        ImGui::Image((void*)m_MainImageTexture, drawSize);
+    } else {
+        ImGui::Text("No image loaded or selected.");
+    }
 
     ImGui::End();
 }
