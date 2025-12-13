@@ -12,6 +12,14 @@
 struct AppConfig {
     char SourceFolder[260] = "";
     char DestFolder[260] = "";
+    char PortraitTagPath[260] = "";
+    char LandscapeTagPath[260] = "";
+};
+
+struct TagSettings {
+    float TagScale = 1.0f;
+    float PosXPct = 0.5f;
+    float PosYPct = 0.5f;
 };
 
 class PhotoApp {
@@ -29,6 +37,7 @@ private:
     ID3D11DeviceContext* m_pd3dDeviceContext = nullptr;
 
     AppConfig m_Config;
+    TagSettings m_TagSettings;
 
     // File navigation
     std::vector<std::string> m_ImageFiles;
@@ -36,9 +45,15 @@ private:
 
     // Textures
     ID3D11ShaderResourceView* m_MainImageTexture = nullptr;
+    ID3D11ShaderResourceView* m_PortraitTagTexture = nullptr;
+    ID3D11ShaderResourceView* m_LandscapeTagTexture = nullptr;
 
     int m_MainImageWidth = 0;
     int m_MainImageHeight = 0;
+    int m_PortraitTagWidth = 0;
+    int m_PortraitTagHeight = 0;
+    int m_LandscapeTagWidth = 0;
+    int m_LandscapeTagHeight = 0;
 
     // GDI+
     ULONG_PTR m_gdiplusToken;
@@ -47,4 +62,8 @@ private:
     void LoadImageTexture(const char* filename, ID3D11ShaderResourceView** out_srv, int* out_width, int* out_height);
     void UnloadCurrentImages();
     void OpenFolderDialog(char* buffer, int maxLen);
+    void OpenFileDialog(char* buffer, int maxLen);
+
+    // Logic
+    void RenderPreview();
 };
