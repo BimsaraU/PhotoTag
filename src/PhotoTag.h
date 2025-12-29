@@ -20,6 +20,10 @@ struct TagSettings {
     float TagScale = 1.0f;
     float PosXPct = 0.5f;
     float PosYPct = 0.5f;
+    bool  SnapGrid = false;
+    int   GridLines = 6;
+    float SafeMargin = 0.0f;
+    float TagOpacity = 1.0f;
 };
 
 class PhotoApp {
@@ -64,6 +68,11 @@ private:
     void OpenFolderDialog(char* buffer, int maxLen);
     void OpenFileDialog(char* buffer, int maxLen);
 
+    // Dragging Logic
+    float m_UnsnappedPosX = 0.5f;
+    float m_UnsnappedPosY = 0.5f;
+
     // Logic
     void RenderPreview();
+    void DrawGrid(ImVec2 imageStart, ImVec2 imageSize);
 };
