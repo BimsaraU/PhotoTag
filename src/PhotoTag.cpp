@@ -119,6 +119,11 @@ void PhotoApp::Update() {
    // Logic updates map go here
 }
 
+static void PathLabel(const char* text) {
+    const char* display = (text && text[0]) ? text : "(none)";
+    ImGui::TextWrapped("%s", display);
+}
+
 void PhotoApp::RenderUI() {
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -130,16 +135,16 @@ void PhotoApp::RenderUI() {
     ImGui::Text("FOLDERS");
     ImGui::Separator();
 
-    if (ImGui::Button("Source Folder")) OpenFolderDialog(m_Config.SourceFolder, 260);
-    ImGui::Text("%s", m_Config.SourceFolder);
+    if (ImGui::Button("Source Folder", ImVec2(-1, 0))) OpenFolderDialog(m_Config.SourceFolder, 260);
+    PathLabel(m_Config.SourceFolder);
 
-    if (ImGui::Button("Output Folder")) OpenFolderDialog(m_Config.DestFolder, 260);
-    ImGui::Text("%s", m_Config.DestFolder);
+    if (ImGui::Button("Output Folder", ImVec2(-1, 0))) OpenFolderDialog(m_Config.DestFolder, 260);
+    PathLabel(m_Config.DestFolder);
 
     ImGui::Separator();
     ImGui::Text("IMAGES");
 
-    if (ImGui::Button("Load Images")) {
+    if (ImGui::Button("Load Images", ImVec2(-1, 0))) {
         LoadSourceFolder();
     }
     ImGui::Text("%d images loaded", (int)m_ImageFiles.size());
