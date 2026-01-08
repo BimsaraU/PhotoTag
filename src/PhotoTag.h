@@ -23,7 +23,10 @@ struct TagSettings {
     bool  SnapGrid = false;
     int   GridLines = 6;
     float SafeMargin = 0.0f;
+    bool  EnableBlur = false;
+    int   BlurDownscale = 16;
     float TagOpacity = 1.0f;
+    float BackgroundOpacity = 1.0f;
 };
 
 class PhotoApp {
@@ -49,6 +52,7 @@ private:
 
     // Textures
     ID3D11ShaderResourceView* m_MainImageTexture = nullptr;
+    ID3D11ShaderResourceView* m_BlurredImageTexture = nullptr;
     ID3D11ShaderResourceView* m_PortraitTagTexture = nullptr;
     ID3D11ShaderResourceView* m_LandscapeTagTexture = nullptr;
 
@@ -63,7 +67,7 @@ private:
     ULONG_PTR m_gdiplusToken;
 
     // Helpers
-    void LoadImageTexture(const char* filename, ID3D11ShaderResourceView** out_srv, int* out_width, int* out_height);
+    void LoadImageTexture(const char* filename, ID3D11ShaderResourceView** out_srv, int* out_width, int* out_height, ID3D11ShaderResourceView** out_blur_srv = nullptr, int blur_downscale = 16);
     void UnloadCurrentImages();
     void OpenFolderDialog(char* buffer, int maxLen);
     void OpenFileDialog(char* buffer, int maxLen);
@@ -75,4 +79,6 @@ private:
     // Logic
     void RenderPreview();
     void DrawGrid(ImVec2 imageStart, ImVec2 imageSize);
+
+    void GenerateGaussianBlur(Gdiplus::Bitmap* bmp, int radius);
 };
