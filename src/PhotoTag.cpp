@@ -2,6 +2,8 @@
 #include <tchar.h>
 #include <shobjidl.h>
 #include <algorithm>
+#include <cmath>
+#include <vector>
 
 #pragma comment (lib,"Gdiplus.lib")
 
@@ -32,6 +34,48 @@ PhotoApp::PhotoApp(ID3D11Device* device, ID3D11DeviceContext* context)
 PhotoApp::~PhotoApp() {
     UnloadCurrentImages();
     Gdiplus::GdiplusShutdown(m_gdiplusToken);
+}
+
+// Separable Gaussian Blur (approximated by passes of Box Blur for speed)
+void PhotoApp::GenerateGaussianBlur(Gdiplus::Bitmap* bmp, int radius) {
+    if (radius < 1) return;
+
+    int w = bmp->GetWidth();
+    int h = bmp->GetHeight();
+
+    Gdiplus::Rect rect(0, 0, w, h);
+    Gdiplus::BitmapData data;
+    if (bmp->LockBits(&rect, Gdiplus::ImageLockModeRead | Gdiplus::ImageLockModeWrite, PixelFormat32bppARGB, &data) != Gdiplus::Ok) return;
+
+    int stride = data.Stride;
+    unsigned char* pixels = (unsigned char*)data.Scan0;
+
+    std::vector<unsigned char> buffer(h * stride);
+    memcpy(buffer.data(), pixels, h * stride);
+
+    // Single box pass, horizontal only for now
+    float iarr = 1.0f / (radius + radius + 1);
+    for (int i = 0; i < h; i++) {
+        int ti = i * stride;
+        for (int j = 0; j < w; j++) {
+            int sb = 0, sg = 0, sr = 0, cnt = 0;
+            for (int k = -radius; k <= radius; k++) {
+                int x = j + k;
+                if (x < 0) x = 0;
+                if (x >= w) x = w - 1;
+                sb += buffer[ti + x * 4];
+                sg += buffer[ti + x * 4 + 1];
+                sr += buffer[ti + x * 4 + 2];
+                cnt++;
+            }
+            pixels[ti + j * 4]     = (unsigned char)(sb / cnt);
+            pixels[ti + j * 4 + 1] = (unsigned char)(sg / cnt);
+            pixels[ti + j * 4 + 2] = (unsigned char)(sr / cnt);
+            pixels[ti + j * 4 + 3] = 255;
+        }
+    }
+
+    bmp->UnlockBits(&data);
 }
 
 void PhotoApp::UnloadCurrentImages() {
