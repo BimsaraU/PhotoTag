@@ -8,6 +8,8 @@
 #include <vector>
 #include <windows.h>
 #include <gdiplus.h>
+#include <atomic>
+#include <thread>
 
 struct AppConfig {
     char SourceFolder[260] = "";
@@ -38,6 +40,7 @@ public:
     void RenderUI();
 
     void LoadSourceFolder();
+    void ProcessAllImages();
 
 private:
     ID3D11Device* m_pd3dDevice = nullptr;
@@ -71,6 +74,11 @@ private:
     void UnloadCurrentImages();
     void OpenFolderDialog(char* buffer, int maxLen);
     void OpenFileDialog(char* buffer, int maxLen);
+
+    // Processing State
+    std::atomic<bool> m_IsProcessing;
+    std::atomic<float> m_ProcessingProgress; // 0.0 to 1.0
+    std::thread m_WorkerThread;
 
     // Dragging Logic
     float m_UnsnappedPosX = 0.5f;
