@@ -27,11 +27,18 @@ std::wstring Utf8ToWide(const std::string& str) {
 PhotoApp::PhotoApp(ID3D11Device* device, ID3D11DeviceContext* context)
     : m_pd3dDevice(device), m_pd3dDeviceContext(context)
 {
+    m_IsProcessing = false;
+    m_ProcessingProgress = 0.0f;
+
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     Gdiplus::GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, NULL);
 }
 
 PhotoApp::~PhotoApp() {
+    m_IsProcessing = false; // Signal thread to stop
+    if (m_WorkerThread.joinable()) {
+        m_WorkerThread.join();
+    }
     UnloadCurrentImages();
     Gdiplus::GdiplusShutdown(m_gdiplusToken);
 }
@@ -193,6 +200,11 @@ void PhotoApp::RenderUI() {
     }
     ImGui::Text("%d images loaded", (int)m_ImageFiles.size());
 
+    ImGui::Separator();
+    if (ImGui::Button("Export All", ImVec2(-1, 36))) {
+        ProcessAllImages();
+    }
+
     if (m_MainImageTexture) {
         ImVec2 avail = ImGui::GetContentRegionAvail();
         float aspect = (float)m_MainImageWidth / (float)m_MainImageHeight;
@@ -210,7 +222,111 @@ void PhotoApp::RenderUI() {
     ImGui::End();
 }
 
+void PhotoApp::ProcessAllImages() {
+    if (m_IsProcessing) return;
+    if (m_ImageFiles.empty()) return;
+    if (std::string(m_Config.DestFolder).empty()) return;
+
+    m_IsProcessing = true;
+    m_ProcessingProgress = 0.0f;
+
+    // Run in a separate thread to avoid freezing UI
+    if (m_WorkerThread.joinable()) m_WorkerThread.join();
+    m_WorkerThread = std::thread([this]() {
+        size_t total = m_ImageFiles.size();
+
+        CLSID jpegClsid = {};
+        {
+            UINT num = 0, size = 0;
+            Gdiplus::GetImageEncodersSize(&num, &size);
+            if (size != 0) {
+                Gdiplus::ImageCodecInfo* pInfo = (Gdiplus::ImageCodecInfo*)(malloc(size));
+                Gdiplus::GetImageEncoders(num, size, pInfo);
+                for (UINT j = 0; j < num; ++j) {
+                    if (wcscmp(pInfo[j].MimeType, L"image/jpeg") == 0) {
+                        jpegClsid = pInfo[j].Clsid;
+                        break;
+                    }
+                }
+                free(pInfo);
+            }
+        }
+
+        for (size_t i = 0; i < total; ++i) {
+            if (!m_IsProcessing) break;
+
+            std::string filePath = m_ImageFiles[i];
+            m_ProcessingProgress = (float)i / (float)total;
+
+            std::wstring wFilePath = Utf8ToWide(filePath);
+            Gdiplus::Bitmap* srcBmp = Gdiplus::Bitmap::FromFile(wFilePath.c_str());
+            if (!srcBmp || srcBmp->GetLastStatus() != Gdiplus::Ok) { delete srcBmp; continue; }
+
+            std::string name = filePath.substr(filePath.find_last_of("\\") + 1);
+            std::wstring wDest = Utf8ToWide(std::string(m_Config.DestFolder) + "\\Tagged_" + name);
+            srcBmp->Save(wDest.c_str(), &jpegClsid, NULL);
+
+            delete srcBmp;
+        }
+
+        m_ProcessingProgress = 1.0f;
+        m_IsProcessing = false;
+    });
+}
+
 // Dialog stubs
+void PhotoApp::ProcessAllImages() {
+    if (m_IsProcessing) return;
+    if (m_ImageFiles.empty()) return;
+    if (std::string(m_Config.DestFolder).empty()) return;
+
+    m_IsProcessing = true;
+    m_ProcessingProgress = 0.0f;
+
+    // Run in a separate thread to avoid freezing UI
+    if (m_WorkerThread.joinable()) m_WorkerThread.join();
+    m_WorkerThread = std::thread([this]() {
+        size_t total = m_ImageFiles.size();
+
+        CLSID jpegClsid = {};
+        {
+            UINT num = 0, size = 0;
+            Gdiplus::GetImageEncodersSize(&num, &size);
+            if (size != 0) {
+                Gdiplus::ImageCodecInfo* pInfo = (Gdiplus::ImageCodecInfo*)(malloc(size));
+                Gdiplus::GetImageEncoders(num, size, pInfo);
+                for (UINT j = 0; j < num; ++j) {
+                    if (wcscmp(pInfo[j].MimeType, L"image/jpeg") == 0) {
+                        jpegClsid = pInfo[j].Clsid;
+                        break;
+                    }
+                }
+                free(pInfo);
+            }
+        }
+
+        for (size_t i = 0; i < total; ++i) {
+            if (!m_IsProcessing) break;
+
+            std::string filePath = m_ImageFiles[i];
+            m_ProcessingProgress = (float)i / (float)total;
+
+            std::wstring wFilePath = Utf8ToWide(filePath);
+            Gdiplus::Bitmap* srcBmp = Gdiplus::Bitmap::FromFile(wFilePath.c_str());
+            if (!srcBmp || srcBmp->GetLastStatus() != Gdiplus::Ok) { delete srcBmp; continue; }
+
+            std::string name = filePath.substr(filePath.find_last_of("\\") + 1);
+            std::wstring wDest = Utf8ToWide(std::string(m_Config.DestFolder) + "\\Tagged_" + name);
+            srcBmp->Save(wDest.c_str(), &jpegClsid, NULL);
+
+            delete srcBmp;
+        }
+
+        m_ProcessingProgress = 1.0f;
+        m_IsProcessing = false;
+    });
+}
+
 // Dialog stubs
 void PhotoApp::OpenFolderDialog(char* buffer, int maxLen) {
     IFileDialog *pfd;
