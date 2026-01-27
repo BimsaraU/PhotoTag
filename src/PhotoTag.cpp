@@ -201,8 +201,20 @@ void PhotoApp::RenderUI() {
     ImGui::Text("%d images loaded", (int)m_ImageFiles.size());
 
     ImGui::Separator();
+    bool processing = m_IsProcessing.load();
+    if (processing) ImGui::BeginDisabled();
     if (ImGui::Button("Export All", ImVec2(-1, 36))) {
         ProcessAllImages();
+    }
+    if (processing) ImGui::EndDisabled();
+
+    if (processing) {
+        float progress = m_ProcessingProgress;
+        int current = (int)(progress * m_ImageFiles.size()) + 1;
+        int total = (int)m_ImageFiles.size();
+        if (current > total) current = total;
+        ImGui::Text("Exporting %d / %d", current, total);
+        ImGui::ProgressBar(progress, ImVec2(-1, 8));
     }
 
     if (m_MainImageTexture) {
