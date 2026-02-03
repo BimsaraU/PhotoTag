@@ -226,7 +226,37 @@ void PhotoApp::RenderUI() {
         } else {
             drawSize.y = avail.x / aspect;
         }
-        ImGui::Image((void*)m_MainImageTexture, drawSize);
+        ImVec2 drawPos = ImGui::GetCursorScreenPos();
+        float offsetX = (avail.x - drawSize.x) * 0.5f;
+        float offsetY = (avail.y - drawSize.y) * 0.5f;
+        drawPos.x += offsetX;
+        drawPos.y += offsetY;
+
+        ImGui::GetWindowDrawList()->AddImage((void*)m_MainImageTexture, drawPos,
+            ImVec2(drawPos.x + drawSize.x, drawPos.y + drawSize.y));
+
+        // Map PosXPct/PosYPct [0,1] to the valid center range so the tag
+        // never hangs off the edge of the image.
+        float tagW = drawSize.x * m_TagSettings.TagScale;
+        float tagH = tagW;
+        float halfTagW = tagW * 0.5f;
+        float halfTagH = tagH * 0.5f;
+
+        float minCX = halfTagW;
+        float maxCX = drawSize.x - halfTagW;
+        if (minCX > maxCX) { minCX = maxCX = drawSize.x * 0.5f; }
+        float currentCX = minCX + m_TagSettings.PosXPct * (maxCX - minCX);
+
+        float minCY = halfTagH;
+        float maxCY = drawSize.y - halfTagH;
+        if (minCY > maxCY) { minCY = maxCY = drawSize.y * 0.5f; }
+        float currentCY = minCY + m_TagSettings.PosYPct * (maxCY - minCY);
+
+        float tagX = drawPos.x + currentCX - halfTagW;
+        float tagY = drawPos.y + currentCY - halfTagH;
+
+        ImGui::GetWindowDrawList()->AddRect(ImVec2(tagX, tagY),
+            ImVec2(tagX + tagW, tagY + tagH), IM_COL32(255, 255, 0, 200), 0.0f, 0, 2.0f);
     } else {
         ImGui::Text("No image loaded or selected.");
     }
