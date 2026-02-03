@@ -8,8 +8,6 @@
 #include <vector>
 #include <windows.h>
 #include <gdiplus.h>
-#include <atomic>
-#include <thread>
 
 struct AppConfig {
     char SourceFolder[260] = "";
@@ -19,14 +17,14 @@ struct AppConfig {
 };
 
 struct TagSettings {
-    float TagScale = 1.0f;
+    float TagScale = 1.0f; // Replaced WidthPct/HeightPct with Scale
     float PosXPct = 0.5f;
     float PosYPct = 0.5f;
     bool  SnapGrid = false;
     int   GridLines = 6;
     float SafeMargin = 0.0f;
     bool  EnableBlur = false;
-    int   BlurDownscale = 16;
+    int   BlurDownscale = 16; // Adjustable blur amount
     float TagOpacity = 1.0f;
     float BackgroundOpacity = 1.0f;
 };
@@ -58,7 +56,7 @@ private:
     ID3D11ShaderResourceView* m_BlurredImageTexture = nullptr;
     ID3D11ShaderResourceView* m_PortraitTagTexture = nullptr;
     ID3D11ShaderResourceView* m_LandscapeTagTexture = nullptr;
-
+    
     int m_MainImageWidth = 0;
     int m_MainImageHeight = 0;
     int m_PortraitTagWidth = 0;
@@ -74,19 +72,11 @@ private:
     void UnloadCurrentImages();
     void OpenFolderDialog(char* buffer, int maxLen);
     void OpenFileDialog(char* buffer, int maxLen);
-
-    // Processing State
-    std::atomic<bool> m_IsProcessing;
-    std::atomic<float> m_ProcessingProgress; // 0.0 to 1.0
-    std::thread m_WorkerThread;
-
-    // Dragging Logic
-    float m_UnsnappedPosX = 0.5f;
-    float m_UnsnappedPosY = 0.5f;
-
+    
     // Logic
     void RenderPreview();
     void DrawGrid(ImVec2 imageStart, ImVec2 imageSize);
-
+    
+    bool m_FullscreenPreview = false;
     void GenerateGaussianBlur(Gdiplus::Bitmap* bmp, int radius);
 };
