@@ -8,6 +8,8 @@
 #include <vector>
 #include <windows.h>
 #include <gdiplus.h>
+#include <atomic>
+#include <thread>
 
 struct AppConfig {
     char SourceFolder[260] = "";
@@ -63,6 +65,15 @@ private:
     int m_PortraitTagHeight = 0;
     int m_LandscapeTagWidth = 0;
     int m_LandscapeTagHeight = 0;
+
+    // Processing State
+    std::atomic<bool> m_IsProcessing;
+    std::atomic<float> m_ProcessingProgress; // 0.0 to 1.0
+    std::thread m_WorkerThread;
+
+    // Dragging Logic
+    float m_UnsnappedPosX = 0.5f;
+    float m_UnsnappedPosY = 0.5f;
 
     // GDI+
     ULONG_PTR m_gdiplusToken;
