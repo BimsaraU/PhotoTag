@@ -3,7 +3,13 @@
 #include "../imgui/imgui_impl_dx11.h"
 #include <d3d11.h>
 #include <tchar.h>
+#include <dwmapi.h>
+#include <objbase.h>
 #include "PhotoTag.h"
+#include "resource.h"
+
+#pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "ole32.lib")
 
 // Data
 static ID3D11Device*            g_pd3dDevice = NULL;
@@ -21,11 +27,22 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 // Main code
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
 {
+    // Initialize COM (required for file dialogs)
+    ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
     // Create application window
-    //ImGui_ImplWin32_EnableDpiAwareness();
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("PhotoTag App"), NULL };
+    HICON hIcon = ::LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), hIcon, NULL, NULL, NULL, _T("PhotoTag App"), hIcon };
     ::RegisterClassEx(&wc);
-    HWND hwnd = ::CreateWindow(wc.lpszClassName, _T("PhotoTagger - Fast Native App"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = ::CreateWindow(wc.lpszClassName, _T("PhotoTagger"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+
+    // Enable immersive dark mode on supported Windows versions (Win10 2004+)
+    // DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+    BOOL value = TRUE;
+    if (FAILED(::DwmSetWindowAttribute(hwnd, 20, &value, sizeof(value)))) {
+        // Fallback for older Win10 builds that used undocumented attribute 19
+        ::DwmSetWindowAttribute(hwnd, 19, &value, sizeof(value));
+    }
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
@@ -80,7 +97,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         // Rendering
         ImGui::Render();
-        const float clear_color_with_alpha[4] = { 0.15f, 0.15f, 0.15f, 1.00f }; // Dark Gray background
+        const float clear_color_with_alpha[4] = { 0.102f, 0.145f, 0.176f, 1.00f }; // #1a252d background
         g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -97,6 +114,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     ::DestroyWindow(hwnd);
     ::UnregisterClass(wc.lpszClassName, wc.hInstance);
 
+    ::CoUninitialize();
     return 0;
 }
 
