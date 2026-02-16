@@ -1,5 +1,7 @@
 # PhotoTag
 
+[![Download PhotoTag](https://img.shields.io/badge/Download-PhotoTag.exe-blue?style=for-the-badge&logo=windows)](bin/PhotoTag.exe)
+
 A high-performance batch image tagging and watermarking tool for Windows.
 
 ## Features
@@ -21,7 +23,9 @@ A high-performance batch image tagging and watermarking tool for Windows.
 
 ## Installation
 
-Download the latest release from the [Releases](https://github.com/BimsaraU/PhotoTag/releases) page or build from source.
+Click the **Download** button above to get the standalone executable `PhotoTag.exe`. No installation required.
+
+Or download the latest release from the [Releases](https://github.com/BimsaraU/PhotoTag/releases) page.
 
 ### Building from Source
 
